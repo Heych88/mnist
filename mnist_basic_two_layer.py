@@ -43,9 +43,10 @@ def linear_layer(x_data, node_count):
     # x_data: Input features from the precedding layer
     # node_count: number of nodes outputing to in the next layer
     # return: activated output of current layer
-    input_features = x_data.get_shape().as_list()[1] # number of features in x_data
+    input_features = x_data.get_shape().as_list()[1] # number of features 
 
-    w = tf.Variable(tf.truncated_normal(shape=(input_features, node_count), mean=0, stddev=0.1))
+    w = tf.Variable(tf.truncated_normal(shape=(input_features, node_count), \
+                                        mean=0, stddev=0.1))
     b = tf.Variable(tf.zeros(node_count))
     
     return tf.add(tf.matmul(x_data, w), b)
@@ -71,7 +72,8 @@ def model(x):
 # creates a one hot encoded vectors for the training data
 def one_hot_encode(labels):
     # labels: label position data to be one hot encoded, [3, ...]
-    # return a tensor with one hot encoding of data of labels, [[0,0,0,1,0],[...]]
+    # return a tensor with one hot encoding of data of labels, 
+    # eg [[0,0,0,1,0],[...]]
     depth = len(np.unique(labels))
     size = np.shape(labels)[0]
     one_hot = np.zeros((size, depth))
@@ -96,7 +98,7 @@ batch_size = 128
 # run the model
 logits = model(x)
 # get the final output of the model and find the loss 
-cross_entropy = tf.nn.softmax_cross_entropy_with_logits(logits=logits, labels=y)
+cross_entropy = tf.nn.softmax_cross_entropy_with_logits(logits=logits,labels=y)
 loss = tf.reduce_mean(cross_entropy)
 # Update the model to predict better results based of the training loss
 optimizer = tf.train.AdamOptimizer(learn_rate)
@@ -122,9 +124,15 @@ with tf.Session() as sess:
         for step in range(0, n_classes, batch_size):
             end = step + batch_size
             batch_x, batch_y = x_train[step:end], y_train[step:end]
-            _, train_accuracy = sess.run([training, accuracy], feed_dict={x: batch_x, y: batch_y})
+            _, train_accuracy = sess.run([training, accuracy], \
+                                         feed_dict={x: batch_x, y: batch_y})
         
         # check the accuracy of the model against the validation set
-        validation_accuracy = sess.run(accuracy, feed_dict={x: mnist.validation.images, y:one_hot_valid})
-        # print out the models accuracies. to print on same line, add \r to start of string
-        sys.stdout.write("EPOCH {}. Train Accuracy = {:.3f},  Validation Accuracy = {:.3f}\n".format(epoch+1, train_accuracy, validation_accuracy))
+        validation_accuracy = sess.run(accuracy, \
+                                       feed_dict={x: mnist.validation.images, \
+                                                  y:one_hot_valid})
+        # print out the models accuracies. 
+        # to print on same line, add \r to start of string
+        sys.stdout.write("EPOCH {}. Train Accuracy = {:.3f},  Validation "\
+                         "Accuracy = {:.3f}\n".format(epoch+1, train_accuracy,\
+                                     validation_accuracy))
