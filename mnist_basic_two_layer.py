@@ -126,4 +126,5 @@ with tf.Session() as sess:
         
         # check the accuracy of the model against the validation set
         validation_accuracy = sess.run(accuracy, feed_dict={x: mnist.validation.images, y:one_hot_valid})
-        sys.stdout.write("\rEPOCH {}. Train Accuracy = {:.3f},  Validation Accuracy = {:.3f} ".format(epoch+1, train_accuracy, validation_accuracy))
+        # print out the models accuracies. to print on same line, add \r to start of string
+        sys.stdout.write("EPOCH {}. Train Accuracy = {:.3f},  Validation Accuracy = {:.3f}\n".format(epoch+1, train_accuracy, validation_accuracy))
