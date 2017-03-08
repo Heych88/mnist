@@ -16,7 +16,7 @@ from tensorflow.examples.tutorials.mnist import input_data
 from sklearn.utils import shuffle
 import sys
 
-mnist = input_data.read_data_sets("/tmp/data") #, one_hot='True')
+mnist = input_data.read_data_sets("/tmp/data")
 
 # how many different output classes are there in the data
 n_classes = len(np.unique(mnist.train.labels))
@@ -64,7 +64,7 @@ def layer(x_data, node_count):
 def model(x):
     # Layer 1: Input features = 784, Output = 100
     lay1 = layer(x, 100)
-    # Layer 1: Input features = 100, Output = 10
+    # Layer 2: Input features = 100, Output = 10
     lay2 = linear_layer(lay1, n_classes)
     return lay2
 
