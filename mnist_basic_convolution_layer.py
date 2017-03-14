@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 **********************************************************************
-* Filename    : mnist_basic_two_layer.py
+* Filename    : mnist_basic_convolution_layer.py
 * Description : A basic two layer neral network of the mnist dataset
 * Created on  : Mon Mar  6 11:44:54 2017
 * @author     : haidyn
