@@ -36,11 +36,24 @@ x_valid_reshape = [data.reshape(28,28, 1) for data in mnist.validation.images]
 random_num = np.random.randint(0, n_train)
 # get a random image and reshape the data to a 28 x 28 tensor
 image = mnist.train.images[random_num]
-image = image.reshape((28,28))
+image = tf.reshape(image, [-1, 28, 28, 1])
+tf.summary.image('input', image, 1) # plot image to tensorboard
 
-plt.title("Number %d" % (mnist.train.labels[random_num]))
-plt.axis('off')
-plt.imshow(image, cmap=cm.Greys)
+# creates summaries of the passed in variable for TensorBoard visualization
+# from TensorBoard: Visualizing Learning
+# https://www.tensorflow.org/get_started/summaries_and_tensorboard
+def variable_summaries(var, name):
+    # var : variable that will have its values saved for visualization
+    # returns : Nothing
+    with tf.name_scope('summaries_'+name):
+        mean = tf.reduce_mean(var)
+        tf.summary.scalar('mean_'+name, mean) # save as a tensorboard summary
+        with tf.name_scope('stddev_'+name):
+            stddev = tf.sqrt(tf.reduce_mean(tf.square(var - mean)))
+        tf.summary.scalar('stddev_'+name, stddev)
+        tf.summary.scalar('max_'+name, tf.reduce_max(var))
+        tf.summary.scalar('min_'+name, tf.reduce_min(var))
+        tf.summary.histogram('histogram_'+name, var)
 
 # Convolution layer
 # each convolution layer will max pool with kernal size (2,2) and strides (2,2)
@@ -61,17 +74,20 @@ def convolution(x, filter_size, ksize=(3,3), strides=(1,1), \
         
         # define the kernel shap for the convolutionaa filter
         shape = [ksize[0], ksize[1], input_features, filter_size]
-        w = tf.Variable(tf.truncated_normal(shape=shape, mean=mean, stddev=sigma), 
-                        name='W')
-        b = tf.Variable(tf.zeros(filter_size), name='B')
+        weight = tf.Variable(tf.truncated_normal(shape=shape, mean=mean, stddev=sigma),
+                             name='Weight')
+        variable_summaries(weight, 'weight_'+name) # save the weight summary for tensorboard
+        bias = tf.Variable(tf.zeros(filter_size), name='Bias')
+        variable_summaries(bias, 'bias_'+name)  # save the bias value summary for tensorboard
         
         # perform a convolution layer on the x_data using strides conv_strides
         stride = [1, strides[0], strides[1], 1]
-        conv = tf.nn.conv2d(x, w, strides=stride, padding=padding)
-        conv = tf.nn.bias_add(conv, b)
+        conv = tf.nn.conv2d(x, weight, strides=stride, padding=padding)
+        conv = tf.nn.bias_add(conv, bias)
 
         # activate the convolutional data
         relu = tf.nn.relu(conv)
+        tf.summary.histogram('activation_' + name, relu)
         
         # return the max pool of the activation
         ksize = [1, 2, 2, 1]
@@ -88,11 +104,13 @@ def linear_layer(x_data, node_count, name="linear_layer"):
     with tf.name_scope(name):
         input_features = x_data.get_shape().as_list()[1] # number of features 
     
-        w = tf.Variable(tf.truncated_normal(shape=(input_features, node_count), \
-                                            mean=0, stddev=0.1), name='W')
-        b = tf.Variable(tf.zeros(node_count), name='B')
+        weight = tf.Variable(tf.truncated_normal(shape=(input_features, node_count),
+                                                 mean=0, stddev=0.1), name='Weight')
+        variable_summaries(weight, 'weights_'+name)
+        bias = tf.Variable(tf.zeros(node_count), name='Bias')
+        variable_summaries(bias, 'bias_'+name)
         
-        return tf.add(tf.matmul(x_data, w), b)
+        return tf.add(tf.matmul(x_data, weight), bias)
 
 # define a set structure for each hidden layer
 def dense_layer(x_data, node_count, name="dense"):
@@ -103,6 +121,7 @@ def dense_layer(x_data, node_count, name="dense"):
         linear = linear_layer(x_data, node_count, name=name)
         # activate the layer
         relu = tf.nn.relu(linear)
+        tf.summary.histogram('activation_'+name, relu)
         return relu
 
 # create the neural model for learning the data
@@ -114,17 +133,17 @@ def model(x, name='model'):
     # return : the final prediction
     with tf.name_scope(name):
         # Input: 28x28x3, Output: 14x14x6
-        conv1 = convolution(x, 6)
+        conv1 = convolution(x, 6, name='conv1')
         # Input: 14x14x6, Output: 7x7x16
-        conv2 = convolution(conv1, 16)
+        conv2 = convolution(conv1, 16, name='conv2')
 
         # flatten the convolutional layer before using in fully connected layer
         fc = tf.contrib.layers.flatten(conv2)
 
         # Layer 1: Input features = 784, Output = 100
-        fc1 = dense_layer(fc, 100)
+        fc1 = dense_layer(fc, 100, name='dense1')
         # Layer 2: Input features = 100, Output = 10
-        model_predict = linear_layer(fc1, n_classes)
+        model_predict = linear_layer(fc1, n_classes, name='output')
 
         return model_predict
 
@@ -162,6 +181,8 @@ with tf.name_scope('loss'):
     # get the final output of the model and find the loss
     cross_entropy = tf.nn.softmax_cross_entropy_with_logits(logits=logits,labels=y)
     loss = tf.reduce_mean(cross_entropy)
+#tf.summary.scalar('cross_entropy', cross_entropy)
+tf.summary.scalar('mean_loss', loss)
 
 with tf.name_scope('train'):
     # Update the model to predict better results based of the training loss
@@ -173,9 +194,10 @@ with tf.name_scope('accuracy'):
     # Accuracy of the model measured against the validation set
     correct_pred = tf.equal(tf.argmax(logits, 1), tf.argmax(y, 1))
     accuracy = tf.reduce_mean(tf.cast(correct_pred, tf.float32))
+tf.summary.scalar('accuracy', accuracy)
 
 # Merge all the summaries and write them to log_path location
-merged = tf.summary.merge_all()
+merged_summary = tf.summary.merge_all()
 
 # train the model
 with tf.Session() as sess:
@@ -196,20 +218,24 @@ with tf.Session() as sess:
         for step in range(0, n_classes, batch_size):
             end = step + batch_size
             batch_x, batch_y = x_train[step:end], y_train[step:end]
-            _, train_accuracy = sess.run([training, accuracy], \
+            summary, _, train_accuracy = sess.run([merged_summary, training, accuracy],\
                                          feed_dict={x: batch_x, y: batch_y})
+
+        # add summaries to tensorboard
+        writer.add_summary(summary, epoch)
         
         # check the accuracy of the model against the validation set
-        validation_accuracy = sess.run(accuracy, \
-                                       feed_dict={x: x_valid_reshape, \
+        validation_accuracy = sess.run(accuracy,\
+                                       feed_dict={x: x_valid_reshape,\
                                                   y:one_hot_valid})
+
         # print out the models accuracies. 
-        # to print on same line, add \r to start of string
+        # to print on the same line, add \r to start of string
         sys.stdout.write("EPOCH {}. Train Accuracy = {:.3f},  Validation "\
                          "Accuracy = {:.3f}\n".format(epoch+1, train_accuracy,\
                                      validation_accuracy))
-
-        print("Run the command line:\n" \
-              "--> tensorboard --logdir={} " \
-              "\nThen open http://0.0.0.0:6006/ into your web browser"
-              .format(log_path))
+    print("\nFinished")
+    print("Run the command line:\n" \
+          "--> tensorboard --logdir={} " \
+          "\nThen open http://0.0.0.0:6006/ into your web browser"\
+          .format(log_path))
