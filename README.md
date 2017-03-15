@@ -15,5 +15,7 @@ Same model as "mnist_basic_convolution_layer.py" but visulizing the system with 
 
 ### Running a model
 1.Run "<the choosen file>.py" in your favorite python IDE or in terminal or command prompt
+
 If the model uses Tensorboard
+
 2. Run "tensorboard --logdir=/tmp/tensorboard/data/mnist" in termal or command prompt
