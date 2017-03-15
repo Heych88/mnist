@@ -32,13 +32,6 @@ n_valid = np.shape(mnist.validation.images)[0]
 x_train_reshape = [data.reshape(28,28, 1) for data in mnist.train.images]
 x_valid_reshape = [data.reshape(28,28, 1) for data in mnist.validation.images]
 
-# display some random sample images to verify the input images are as we expect
-random_num = np.random.randint(0, n_train)
-# get a random image and reshape the data to a 28 x 28 tensor
-image = mnist.train.images[random_num]
-image = tf.reshape(image, [-1, 28, 28, 1])
-tf.summary.image('input', image, 1) # plot image to tensorboard
-
 # creates summaries of the passed in variable for TensorBoard visualization
 # from TensorBoard: Visualizing Learning
 # https://www.tensorflow.org/get_started/summaries_and_tensorboard
@@ -163,6 +156,12 @@ def one_hot_encode(labels):
 with tf.name_scope('placholders'):
     x = tf.placeholder(tf.float32, (None, 28, 28, 1), name='input_data')
     y = tf.placeholder(tf.int16, (None, n_classes), name='label_data')
+
+with tf.name_scope('input_data_images'):
+    # display some random sample images to verify the data is as we expect
+    number_of_images = 12
+    image_shaped_input = tf.reshape(x, [-1, 28, 28, 1])
+    tf.summary.image('input', image_shaped_input, number_of_images)
 
 # one hot encode the training, validation and test data
 one_hot_train = one_hot_encode(mnist.train.labels)
