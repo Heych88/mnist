@@ -8,11 +8,10 @@
 **********************************************************************
 """
 from __future__ import print_function
-import matplotlib.pyplot as plt
-import matplotlib.cm as cm
 import numpy as np
 import tensorflow as tf
 from tensorflow.examples.tutorials.mnist import input_data
+from tensorboard.plugins.beholder import Beholder
 from sklearn.utils import shuffle
 import sys
 
@@ -169,7 +168,7 @@ one_hot_valid = one_hot_encode(mnist.validation.labels)
 one_hot_test = one_hot_encode(mnist.test.labels)
 
 # Hyper parameters
-epochs = 100
+epochs = 1000
 learn_rate = 0.01
 batch_size = 128
 
@@ -205,6 +204,7 @@ with tf.Session() as sess:
     # create tensorboard session at location log_path and save the graph there
     log_path = '/tmp/tensorboard/data/mnist'
     writer = tf.summary.FileWriter(log_path, graph=sess.graph)
+    beholder = Beholder(log_path)
     
     # Traing the model
     print("Training")
@@ -222,6 +222,8 @@ with tf.Session() as sess:
 
         # add summaries to tensorboard
         writer.add_summary(summary, epoch)
+
+        beholder.update(session=sess)
         
         # check the accuracy of the model against the validation set
         validation_accuracy = sess.run(accuracy,\
