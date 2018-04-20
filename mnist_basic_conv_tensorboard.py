@@ -39,11 +39,13 @@ log_path = '/tmp/tensorboard/data/mnist/'
 save_path = './saved_model/'
 
 
-# creates a one hot encoded vectors for the training data
 def one_hot_encode(labels):
-    # labels: label position data to be one hot encoded, [3, ...]
-    # return a tensor with one hot encoding of data of labels,
-    # eg [[0,0,0,1,0],[...]]
+    '''
+    Creates a one hot encoded vectors for the training data
+    :param labels: Label position data to be one hot encoded, [3, ...]
+    :return: A tensor with one hot encoding of data of labels, eg [[0,0,0,1,0],[...]]
+    '''
+
     depth = len(np.unique(labels))
     size = np.shape(labels)[0]
     one_hot = np.zeros((size, depth))
@@ -61,12 +63,16 @@ learn_rate = 0.01
 batch_size = 128
 
 
-# creates summaries of the passed in variable for TensorBoard visualization
-# from TensorBoard: Visualizing Learning
-# https://www.tensorflow.org/get_started/summaries_and_tensorboard
 def variable_summaries(var, name):
-    # var : variable that will have its values saved for visualization
-    # returns : Nothing
+    '''
+    Creates summaries of the passed in variable for TensorBoard visualization
+    from TensorBoard: Visualizing Learning
+    https://www.tensorflow.org/get_started/summaries_and_tensorboard
+    :param var: Variable that will have its values saved for visualization
+    :param name: A label name for the variable
+    :return:
+    '''
+
     with tf.name_scope('summaries_'+name):
         mean = tf.reduce_mean(var)
         tf.summary.scalar('mean_'+name, mean) # save as a tensorboard summary
@@ -78,17 +84,19 @@ def variable_summaries(var, name):
         tf.summary.histogram('histogram_'+name, var)
 
 
-# Convolution layer
-# each convolution layer will max pool with kernal size (2,2) and strides (2,2)
-# this will result in halving the convolutioal layer
-def convolution(x, filter_size, ksize=(3,3), strides=(1,1), \
-                padding='SAME', name='conv'):
-    # x_data: Input features from the precedding layer
-    # filter_size: number of filter output from the convolution
-    # ksize: kernal size 2D Tuple with kernel width and height
-    # strides: kernel stride movement. 2D Tuple of width and height
-    # padding: convolution padding type
-    # return: a convolution tensor of the x_data
+def convolution(x, filter_size, ksize=(3,3), strides=(1,1), padding='SAME', name='conv'):
+    '''
+    Convolution layer where each layer will max pool with kernel size (2,2) and strides (2,2)
+    this will result in halving the convolutioal layer
+    :param x: Input features from the preceding layer
+    :param filter_size: Number of filter output from the convolution
+    :param ksize: Kernal size 2D Tuple with kernel width and height
+    :param strides: Kernel stride movement. 2D Tuple of width and height
+    :param padding: Convolution padding type
+    :param name: A label name for the layer
+    :return: A convolution tensor of the input data
+    '''
+
     with tf.name_scope(name):
         mean = 0
         sigma = 0.1
@@ -118,12 +126,15 @@ def convolution(x, filter_size, ksize=(3,3), strides=(1,1), \
         return tf.nn.max_pool(relu, ksize, pool_strides, padding='SAME')
 
 
-# define a set structure for each linear transform layer
-# also used on the final output layer
 def linear_layer(x_data, node_count, name="linear_layer"):
-    # x_data: Input features from the precedding layer
-    # node_count: number of nodes outputing to in the next layer
-    # return: activated output of current layer
+    '''
+    Defines a set structure for each linear transform layer following the convolutional layers
+    :param x_data: Input features from the preceding layer
+    :param node_count: Number of nodes to out put to in the next layer
+    :param name: A label name for the layer
+    :return: Output tensor of the current layer
+    '''
+
     with tf.name_scope(name):
         input_features = x_data.get_shape().as_list()[1] # number of features 
     
@@ -136,11 +147,15 @@ def linear_layer(x_data, node_count, name="linear_layer"):
         return tf.add(tf.matmul(x_data, weight), bias)
 
 
-# define a set structure for each hidden layer
 def dense_layer(x_data, node_count, name="dense"):
-    # x_data: Input features from the precedding layer
-    # node_count: number of nodes outputing to in the next layer
-    # return: activated output of current layer
+    '''
+    Defines a set structure for each hidden layer
+    :param x_data: Input features from the preceding layer
+    :param node_count: Number of nodes to out put to in the next layer
+    :param name: A label name for the layer
+    :return: Activated tensor for the layer
+    '''
+
     with tf.name_scope(name):
         linear = linear_layer(x_data, node_count, name=name)
         # activate the layer
@@ -149,13 +164,15 @@ def dense_layer(x_data, node_count, name="dense"):
         return relu
 
 
-# create the neural model for learning the data
-# the model used is a two layer convolution with a two layer fully connected
 def model(x, name='model'):
-    # layer 1: convolution on data x with a filter count of 6
-    # x : input data
-    # name : tensorboard name
-    # return : the final prediction
+    '''
+    Create the neural model for learning the data. The model used is a two layer
+    convolution with a two layer fully connected output
+    :param x: Input features from the preceding layer
+    :param name: A label name for the model
+    :return: Tensor of n_classes containing the model predictions
+    '''
+
     with tf.name_scope(name):
         # Input: 28x28x3, Output: 14x14x6
         conv1 = convolution(x, 6, name='conv1')
@@ -173,8 +190,12 @@ def model(x, name='model'):
         return model_predict
 
 
-# define the system placeholders
 def Placeholders():
+    '''
+    Input and label placeholders for the model
+    :return: Model input, model label
+    '''
+
     with tf.name_scope('placholders'):
         x = tf.placeholder(tf.float32, (None, 28, 28, 1), name='input_data')
         y = tf.placeholder(tf.int16, (None, n_classes), name='label_data')
@@ -188,8 +209,14 @@ def Placeholders():
     return x, y
 
 
-
 def create_optimizer(x, y):
+    '''
+    Creates the optimiser functions for training the network
+    :param x: Model input placeholder
+    :param y: Model label placeholder
+    :return: Tensorboard tensor, optimiser function, accuracy tensor
+    '''
+
     with tf.name_scope('model_logits'):
         # run the model
         logits = model(x)
@@ -220,8 +247,19 @@ def create_optimizer(x, y):
 
     return training, accuracy, merged_summary
 
-# train the model
+
 def train_model(sess, x, y, merged_summary, training, accuracy):
+    '''
+    Function that trains the the model.
+    :param sess: Current tensorflow session
+    :param x: Model input placeholder
+    :param y: Model label placeholder
+    :param merged_summary: Tensorboard summary tensor
+    :param training: Optimiser function
+    :param accuracy: Accuracy tensor
+    :return:
+    '''
+
     # create tensorboard session at location log_path and save the graph there
     writer = tf.summary.FileWriter(log_path, graph=sess.graph)
     beholder = Beholder(log_path)
@@ -270,10 +308,12 @@ def train_model(sess, x, y, merged_summary, training, accuracy):
 
 
 
-def load_old_model(sess):
-    """
-    Test the saved model against the test dataset
-    """
+def load_last_model(sess):
+    '''
+    Loads the last checkpoint data for continual training or predictions
+    :param sess: Current tensorflow session
+    :return: Model input, model label, tensorboard tensor, optimiser function, accuracy tensor
+    '''
 
     # Load meta graph and restore weights
     saver = tf.train.import_meta_graph(save_path + 'model.ckpt.meta')
@@ -301,7 +341,7 @@ if __name__ == '__main__':
     if os.path.isfile(save_path + 'model.ckpt.meta'):
         # continue training from the last checkpoint
         with tf.Session() as sess:
-            x, y, merged_summary, training, accuracy = load_old_model(sess)
+            x, y, merged_summary, training, accuracy = load_last_model(sess)
             train_model(sess, x, y, merged_summary, training, accuracy)
     else:
         # create a new model and start training
