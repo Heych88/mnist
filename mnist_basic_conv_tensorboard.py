@@ -14,6 +14,8 @@ from tensorflow.examples.tutorials.mnist import input_data
 from tensorboard.plugins.beholder import Beholder
 from tensorflow.python.saved_model import tag_constants
 from sklearn.utils import shuffle
+from random import randint
+from matplotlib import pyplot as plt
 import sys
 import os
 
@@ -58,7 +60,7 @@ one_hot_valid = one_hot_encode(mnist.validation.labels)
 one_hot_test = one_hot_encode(mnist.test.labels)
 
 # Hyper parameters
-epochs = 50
+epochs = 100
 learn_rate = 0.01
 batch_size = 128
 
@@ -214,7 +216,7 @@ def create_optimizer(x, y):
     Creates the optimiser functions for training the network
     :param x: Model input placeholder
     :param y: Model label placeholder
-    :return: Tensorboard tensor, optimiser function, accuracy tensor
+    :return: Network output, Tensorboard tensor, optimiser function, accuracy tensor
     '''
 
     with tf.name_scope('model_logits'):
@@ -225,7 +227,7 @@ def create_optimizer(x, y):
 
     with tf.name_scope('loss'):
         # get the final output of the model and find the loss
-        cross_entropy = tf.nn.softmax_cross_entropy_with_logits(logits=logits,labels=y)
+        cross_entropy = tf.nn.softmax_cross_entropy_with_logits_v2(logits=logits,labels=y)
         loss = tf.reduce_mean(cross_entropy)
         #tf.summary.scalar('cross_entropy', cross_entropy)
         tf.summary.scalar('mean_loss', loss)
@@ -245,7 +247,7 @@ def create_optimizer(x, y):
     # Merge all the summaries and write them to log_path location
     merged_summary = tf.identity(tf.summary.merge_all(), name='merged_summary')
 
-    return training, accuracy, merged_summary
+    return logits, training, accuracy, merged_summary
 
 
 def train_model(sess, x, y, merged_summary, training, accuracy):
@@ -330,10 +332,29 @@ def load_last_model(sess):
     loaded_y = graph.get_tensor_by_name('placholders/label_data:0')
     loaded_merged_summary = graph.get_tensor_by_name('Merge/MergeSummary:0')
     loaded_accuracy = graph.get_tensor_by_name('accuracy/accuracy:0')
+    loaded_logits = graph.get_tensor_by_name('model_logits/logits:0')
 
     loaded_training = graph.get_operation_by_name("train/training")
 
-    return loaded_x, loaded_y, loaded_merged_summary, loaded_training, loaded_accuracy
+    return loaded_x, loaded_y, loaded_merged_summary, loaded_logits, loaded_training, loaded_accuracy
+
+
+def predict(logits):
+    '''
+    Predicts the class of the input image of the neural network.
+    Prints the class and shows the input image.
+    :param logits: Network model output.
+    :return:
+    '''
+    num = randint(0, mnist.test.images.shape[0])
+    img = mnist.test.images[num]
+
+    prediction = tf.argmax(logits, 1)
+    best = prediction.eval(feed_dict={x: img.reshape((1, 28, 28, 1))})
+    print("Prediction ", best[0])
+
+    plt.imshow(img.reshape(28, 28), cmap=plt.cm.binary)
+    plt.show()
 
 
 if __name__ == '__main__':
@@ -341,14 +362,18 @@ if __name__ == '__main__':
     if os.path.isfile(save_path + 'model.ckpt.meta'):
         # continue training from the last checkpoint
         with tf.Session() as sess:
-            x, y, merged_summary, training, accuracy = load_last_model(sess)
+            x, y, merged_summary, logits, training, accuracy = load_last_model(sess)
             train_model(sess, x, y, merged_summary, training, accuracy)
+
+            predict(logits)
+
     else:
         # create a new model and start training
         x, y, = Placeholders()
-        training, accuracy, merged_summary = create_optimizer(x, y)
+        logits, training, accuracy, merged_summary = create_optimizer(x, y)
 
         with tf.Session() as sess:
             sess.run(tf.global_variables_initializer())
             train_model(sess, x, y, merged_summary, training, accuracy)
 
+            predict(logits)
